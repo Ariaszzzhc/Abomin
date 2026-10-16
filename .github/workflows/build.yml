@@ -97,15 +97,24 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          mkdir -p dist
+          mkdir -p dist/runtime/vendor
           cp build/${{ matrix.platform }}/${{ matrix.arch }}/${{ inputs.configuration }}/abomin${{ matrix.suffix }} dist/
           cp README.md THIRD_PARTY_NOTICES.md dist/
-          cp -r examples types runtime/vendor/streams.LICENSE dist/
+          cp -r examples types dist/
+          cp runtime/vendor/streams.LICENSE dist/runtime/vendor/
       - uses: actions/upload-artifact@v4
         with:
           name: abomin-${{ matrix.name }}-${{ inputs.configuration }}
           path: dist/
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-logs-${{ matrix.name }}
+          path: |
+            ~/.xmake/cache/packages/**/logs/*.txt
+            ~/AppData/Local/.xmake/cache/packages/**/logs/*.txt
+          if-no-files-found: ignore
       - uses: actions/cache/save@v4
         if: always() && steps.llvm-install.outcome == 'success' && steps.llvm-cache.outputs.cache-hit != 'true'
         with:

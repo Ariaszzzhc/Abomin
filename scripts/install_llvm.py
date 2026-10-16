@@ -37,3 +37,18 @@ if not (root/'bin'/'clang.exe' if os.name == 'nt' else root/'bin'/'clang').is_fi
 print(root/'bin')
 if os.environ.get('GITHUB_PATH'):
     with open(os.environ['GITHUB_PATH'], 'a') as stream: stream.write(str(root/'bin')+'\n')
+
+# Build-time SDK/runtime discovery also applies when the toolchain cache is hit.
+# 工具链缓存命中时也需要配置构建期 SDK 与运行库路径。
+environment = {}
+if platform.system() == 'Darwin':
+    environment['SDKROOT'] = subprocess.check_output(['xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
+elif platform.system() == 'Linux':
+    directories = {str(root/'lib')}
+    directories.update(str(path.parent) for path in root.rglob('libc++.so.1'))
+    environment['LD_LIBRARY_PATH'] = ':'.join(sorted(directories)) + (':'+os.environ['LD_LIBRARY_PATH'] if os.environ.get('LD_LIBRARY_PATH') else '')
+if os.environ.get('GITHUB_ENV'):
+    with open(os.environ['GITHUB_ENV'], 'a') as stream:
+        for name, value in environment.items(): stream.write(f'{name}={value}\n')
+else:
+    for name, value in environment.items(): print(f'{name}={value}')

@@ -20,9 +20,9 @@ option("jsc")
 option_end()
 
 add_requires("libuv 1.52.1", "ada 3.4.4", "simdutf 8.2.0", "mimalloc 3.2.8",
-             "brotli 1.2.0", {configs = {shared = false}})
+             "brotli 1.2.0", {system = false, configs = {shared = false}})
 
-add_requires("zlib-ng 2.3.3", {configs = {shared = false, zlib_compat = true}})
+add_requires("zlib-ng 2.3.3", {system = false, configs = {shared = false, zlib_compat = true}})
 
 target("rust_services")
   set_kind("phony")
@@ -41,7 +41,7 @@ target("abomin")
   add_includedirs("src", "build/generated")
   add_packages("libuv", "ada", "simdutf", "mimalloc", "zlib-ng", "brotli")
   add_defines("BUILDING_JSCONLY__=1", "BUILDING_WITH_CMAKE=1", "JSC_OBJC_API_ENABLED=0",
-              "STATICALLY_LINKED_WITH_JavaScriptCore=1", "NDEBUG", "RELEASE_WITHOUT_OPTIMIZATIONS=1")
+              "STATICALLY_LINKED_WITH_JavaScriptCore=1", "STATICALLY_LINKED_WITH_WTF=1", "STATICALLY_LINKED_WITH_bmalloc=1", "NDEBUG", "RELEASE_WITHOUT_OPTIMIZATIONS=1")
   on_load(function (target)
     local sdk = path.absolute(get_config("jsc"))
     target:add("includedirs", sdk .. "/include")
@@ -68,7 +68,7 @@ target("abomin")
     add_cxxflags("-stdlib=libc++", {force = true})
     add_ldflags("-stdlib=libc++", "-no-pie", {force = true})
     add_links("icui18n", "icuuc", "icudata")
-    add_syslinks("pthread", "dl", "m", "atomic", "unwind")
+    add_syslinks("pthread", "dl", "m", "atomic")
   elseif is_plat("windows") then
     set_runtimes("MT")
     add_defines("NOMINMAX", "U_STATIC_IMPLEMENTATION")
