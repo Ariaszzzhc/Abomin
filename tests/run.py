@@ -91,6 +91,14 @@ class RuntimeTests(unittest.TestCase):
             finally:
                 server.terminate(); server.communicate(timeout=5)
 
+    def test_unicode_module_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory)/'模块 空间'; path.mkdir()
+            (path/'dep space.ts').write_text('export const value: number = 42;', encoding='utf-8')
+            entry = path/'entry%#测试.ts'
+            entry.write_text('import { value } from "./dep space.ts"; if (value !== 42) throw new Error("path"); console.log("unicode:ok");', encoding='utf-8')
+            self.assertIn('unicode:ok', self.run_runtime([entry]).stdout)
+
     def test_failures(self):
         self.run_runtime(['eval', 'throw new Error("expected")'], code=1)
         self.run_runtime(['eval', 'Promise.reject(new Error("unhandled"))'], code=1)

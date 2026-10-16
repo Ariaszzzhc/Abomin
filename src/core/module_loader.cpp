@@ -2,6 +2,7 @@
 
 #include <ada.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
@@ -16,9 +17,17 @@ namespace Abomin {
       std::filesystem::file_time_type modified;
       std::uintmax_t size;
       std::string code;
+      std::uint64_t used;
     };
 
+    std::filesystem::path utf8Path(std::string_view value) {
+      return std::filesystem::path(
+          std::u8string(reinterpret_cast<const char8_t*>(value.data()), value.size()));
+    }
+
     std::mutex cacheMutex;
+    std::uint64_t cacheClock{};
+    std::size_t cachedBytes{};
     std::unordered_map<std::string, CachedSource> cache;
   }  // namespace
 
@@ -49,9 +58,9 @@ namespace Abomin {
       if (!url) throw std::runtime_error("Invalid module URL");
       result = url->get_href();
     } else {
-      auto p = std::filesystem::absolute(std::filesystem::u8path(specifier))
-                   .lexically_normal()
-                   .generic_string();
+      auto normalized
+          = std::filesystem::absolute(utf8Path(specifier)).lexically_normal().generic_u8string();
+      std::string p(reinterpret_cast<const char*>(normalized.data()), normalized.size());
 #ifdef _WIN32
       p = "/" + p;
 #endif
@@ -67,20 +76,25 @@ namespace Abomin {
       }
     }
     auto filename = path(result);
-    if (!std::filesystem::is_regular_file(std::filesystem::u8path(filename)))
+    if (!std::filesystem::is_regular_file(utf8Path(filename)))
       throw std::runtime_error("Module not found: " + result);
     return result;
   }
 
   std::string ModuleLoader::source(const std::string& url) {
     auto filename = path(url);
-    auto file = std::filesystem::u8path(filename);
+    auto file = utf8Path(filename);
     auto modified = std::filesystem::last_write_time(file);
     auto size = std::filesystem::file_size(file);
-    std::lock_guard lock(cacheMutex);
-    if (auto found = cache.find(url);
-        found != cache.end() && found->second.modified == modified && found->second.size == size)
-      return found->second.code;
+    if (size > 16 * 1024 * 1024) throw std::runtime_error("Module exceeds 16 MiB: " + url);
+    {
+      std::lock_guard lock(cacheMutex);
+      if (auto found = cache.find(url); found != cache.end() && found->second.modified == modified
+                                        && found->second.size == size) {
+        found->second.used = ++cacheClock;
+        return found->second.code;
+      }
+    }
     std::ifstream input(file, std::ios::binary);
     if (!input) throw std::runtime_error("Cannot read module: " + url);
     std::ostringstream contents;
@@ -97,7 +111,25 @@ namespace Abomin {
     bool failed = output.error;
     ab_buffer_free(output);
     if (failed) throw std::runtime_error(code);
-    cache.insert_or_assign(url, CachedSource{modified, size, code});
+    {
+      std::lock_guard lock(cacheMutex);
+      if (auto found = cache.find(url); found != cache.end()) {
+        cachedBytes -= found->second.code.size();
+        cache.erase(found);
+      }
+      constexpr std::size_t budget = 64 * 1024 * 1024;
+      if (code.size() <= budget) {
+        while (!cache.empty() && (cache.size() >= 256 || cachedBytes + code.size() > budget)) {
+          auto oldest = std::min_element(
+              cache.begin(), cache.end(),
+              [](const auto& a, const auto& b) { return a.second.used < b.second.used; });
+          cachedBytes -= oldest->second.code.size();
+          cache.erase(oldest);
+        }
+        cachedBytes += code.size();
+        cache.emplace(url, CachedSource{modified, size, code, ++cacheClock});
+      }
+    }
     return code;
   }
 }  // namespace Abomin

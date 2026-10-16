@@ -253,7 +253,6 @@ namespace Abomin {
     auto inbox = state->inbox;
     auto stopped = state->stopped;
     auto parent = inbox_;
-    retain();
     auto* owner = state.get();
     state->thread = std::thread([id, url, inbox, stopped, parent, owner] {
       try {
@@ -274,6 +273,7 @@ namespace Abomin {
       parent->send({Envelope::WorkerExit, id, {}});
     });
     workers_[id] = std::move(state);
+    retain();
     return id;
   }
 

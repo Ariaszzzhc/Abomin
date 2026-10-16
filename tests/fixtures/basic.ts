@@ -46,3 +46,8 @@ const file = Abomin.args[0];
 await Abomin.writeTextFile(file, 'file\0你好'); assert(await Abomin.readTextFile(file) === 'file\0你好');
 assert((await Abomin.stat(file)).isFile); await Abomin.remove(file);
 console.log('basic:ok');
+
+const consumed = new Response('body'); const bodyReader = consumed.body!.getReader(); await bodyReader.read(); bodyReader.releaseLock(); assert(consumed.bodyUsed);
+let cloneFailed = false; try { consumed.clone(); } catch { cloneFailed = true; } assert(cloneFailed);
+const snapshot = encoder.encode('abc'); const computing = crypto.subtle.digest('SHA-256', snapshot); snapshot.fill(0);
+assert(new Uint8Array(await computing)[0] === 0xba);

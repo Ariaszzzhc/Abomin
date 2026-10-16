@@ -50,7 +50,8 @@ JavaScriptCore is accessed only from C++. Rust never receives JS values.
 
 Native operations have fixed names and typed arguments. JavaScript owns the
 Promise table; C++ returns completions by call ID on the owning loop. Each task
-is followed by a microtask checkpoint. Sources and Oxc output are process-shared;
+is followed by a microtask checkpoint. Sources and Oxc output are process-shared (256 entries / 64 MiB; individual
+source files are limited to 16 MiB);
 module instances and live bindings belong to their VM. CPU-heavy digest work
 uses a shared pool of up to four native threads with a 256-item queue.
 

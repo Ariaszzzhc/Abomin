@@ -27,7 +27,7 @@ function streamBytes(bytes) {
 }
 function bodyInit(body, headers) {
   if (body == null) return null;
-  if (body instanceof ReadableStream) return body;
+  if (body instanceof ReadableStream) { if (body.locked || body._disturbed) throw new TypeError("Body stream has already been consumed"); return body; }
   let data;
   if (body instanceof Blob) { data = body._bytes(); if (body.type && !headers.has('content-type')) headers.set('content-type', body.type); }
   else if (body instanceof ArrayBuffer || ArrayBuffer.isView(body)) data = toBytes(body).slice();
@@ -52,9 +52,9 @@ function bodyInit(body, headers) {
 class Body {
   _stream = null; _used = false;
   get body() { return this._stream; }
-  get bodyUsed() { return this._used; }
+  get bodyUsed() { return this._used || Boolean(this._stream?._disturbed); }
   async bytes() {
-    if (this._used || this._stream?.locked) throw new TypeError('Body has already been consumed'); this._used = true;
+    if (this.bodyUsed || this._stream?.locked) throw new TypeError('Body has already been consumed'); this._used = true;
     if (!this._stream) return new Uint8Array();
     const reader = this._stream.getReader(), chunks = []; let size = 0;
     try { while (true) { const { done, value } = await reader.read(); if (done) break; const data = toBytes(value); chunks.push(data.slice()); size += data.length; if (size > 256 * 1024 * 1024) { await reader.cancel(); throw new RangeError('Body exceeds 256 MiB; consume body as a stream'); } } }
@@ -69,7 +69,7 @@ class Body {
     if (!this.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new TypeError('Only URL-encoded form bodies are supported');
     const form = new FormData(); for (const [key,value] of new URLSearchParams(await this.text())) form.append(key,value); return form;
   }
-  _cloneBody() { if (this._used || this._stream?.locked) throw new TypeError('Body has already been consumed'); if (!this._stream) return null; const [left,right] = this._stream.tee(); this._stream = left; return right; }
+  _cloneBody() { if (this.bodyUsed || this._stream?.locked) throw new TypeError('Body has already been consumed'); if (!this._stream) return null; const [left,right] = this._stream.tee(); this._stream = left; return right; }
 }
 class Request extends Body {
   constructor(input, init = {}) {

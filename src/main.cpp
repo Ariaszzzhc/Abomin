@@ -3,7 +3,7 @@
 
 #include "core/runtime.hpp"
 
-int main(int argc, char** argv) {
+static int runMain(int argc, char** argv) {
   if (argc < 2 || std::string_view(argv[1]) == "--help" || std::string_view(argv[1]) == "-h") {
     std::cout << "Abomin 0.1.0 — JavaScript / TypeScript runtime\n\n"
                  "Usage: abomin run <file.js|file.ts> [args...]\n"
@@ -32,3 +32,28 @@ int main(int argc, char** argv) {
     return 1;
   }
 }
+
+#ifdef _WIN32
+#  include <windows.h>
+
+/** Preserve Unicode command-line paths on Windows. Windows 命令行路径保留 Unicode。 */
+int wmain(int argc, wchar_t** argv) {
+  std::vector<std::string> storage;
+  storage.reserve(argc);
+  for (int i = 0; i < argc; ++i) {
+    const int size = WideCharToMultiByte(CP_UTF8, 0, argv[i], -1, nullptr, 0, nullptr, nullptr);
+    if (!size) return 2;
+    std::string value(size, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, argv[i], -1, value.data(), size, nullptr, nullptr);
+    value.pop_back();
+    storage.push_back(std::move(value));
+  }
+  std::vector<char*> arguments;
+  for (auto& value : storage) arguments.push_back(value.data());
+  return runMain(argc, arguments.data());
+}
+#else
+int main(int argc, char** argv) {
+  return runMain(argc, argv);
+}
+#endif
