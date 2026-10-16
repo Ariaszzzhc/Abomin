@@ -1,0 +1,48 @@
+import { sum } from './cycle-a.ts';
+import { answer, counter, increment } from './module.ts';
+function assert(condition: unknown, message = 'assertion failed'): asserts condition { if (!condition) throw new Error(message); }
+assert(sum() === 42); assert(answer === 42); increment(); assert(counter === 1);
+const dynamic = await import('./module.ts'); assert(dynamic.counter === 1);
+assert(import.meta.url.endsWith('/basic.ts'));
+const order: number[] = [];
+queueMicrotask(() => order.push(1));
+await new Promise(resolve => setTimeout(() => { order.push(2); resolve(undefined); }, 2));
+assert(order.join(',') === '1,2');
+const encoder = new TextEncoder();
+assert(new TextDecoder().decode(encoder.encode('你好\0world')) === '你好\0world');
+assert(encoder.encode('\ud800')[0] === 239);
+const decoder = new TextDecoder();
+assert(decoder.decode(new Uint8Array([0xe4,0xbd]), { stream: true }) === '');
+assert(decoder.decode(new Uint8Array([0xa0])) === '你');
+assert(new TextDecoder('windows-1252').decode(new Uint8Array([0x80])) === '€');
+assert(atob(btoa('\0abc\xff')) === '\0abc\xff');
+const url = new URL('../x?y=1', 'https://example.com/a/b'); assert(url.href === 'https://example.com/x?y=1');
+assert(url.origin === 'https://example.com');
+url.searchParams.append('q', '你 好'); assert(url.href.includes('q=%E4%BD%A0+%E5%A5%BD'));
+url.pathname = '/hello'; assert(url.pathname === '/hello');
+const original: any = { n: 3n, map: new Map(), set: new Set([1]), date: new Date(0) }; original.self = original; original.map.set(original, original);
+const clone = structuredClone(original); assert(clone !== original && clone.self === clone && clone.map.get(clone) === clone && clone.n === 3n);
+const bytes = new Uint8Array([1,2,3]); const moved = structuredClone({ bytes }, { transfer: [bytes.buffer] });
+assert(bytes.byteLength === 0 && moved.bytes[1] === 2);
+const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode('abc')));
+assert([...digest.slice(0,4)].map(n => n.toString(16).padStart(2,'0')).join('') === 'ba7816bf');
+assert(/^[0-9a-f-]{36}$/.test(crypto.randomUUID()));
+const reusable = crypto.getRandomValues(new Uint8Array(8)); const transferred = structuredClone(reusable, { transfer: [reusable.buffer] }); assert(transferred.byteLength === 8 && reusable.byteLength === 0);
+const subarray = encoder.encode('xabcx').subarray(1,4);
+const subdigest = new Uint8Array(await crypto.subtle.digest('SHA-256', subarray)); assert(subdigest[0] === 0xba);
+const copied = subarray.buffer.transfer(); assert(copied.byteLength === 5);
+const eventTarget = new EventTarget(); let events = 0;
+eventTarget.addEventListener('x', () => events++, { once: true }); eventTarget.dispatchEvent(new Event('x')); eventTarget.dispatchEvent(new Event('x')); assert(events === 1);
+const ac = new AbortController(); ac.abort('reason'); assert(ac.signal.reason === 'reason');
+for (const format of ['gzip','deflate','deflate-raw','brotli']) {
+  const input = new Blob(['stream '.repeat(10000)]).stream();
+  const compressed = input.pipeThrough(new CompressionStream(format));
+  const decompressed = compressed.pipeThrough(new DecompressionStream(format));
+  assert((await new Response(decompressed).text()) === 'stream '.repeat(10000), format);
+}
+const response = Response.json({ ok: true }); const copy = response.clone(); assert((await response.json()).ok && (await copy.json()).ok);
+let failed = false; try { await response.text(); } catch { failed = true; } assert(failed);
+const file = Abomin.args[0];
+await Abomin.writeTextFile(file, 'file\0你好'); assert(await Abomin.readTextFile(file) === 'file\0你好');
+assert((await Abomin.stat(file)).isFile); await Abomin.remove(file);
+console.log('basic:ok');

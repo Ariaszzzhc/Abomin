@@ -1,0 +1,22 @@
+function assert(value: unknown, message = 'assertion failed'): asserts value { if (!value) throw new Error(message); }
+const base = Abomin.args[0];
+const response = await fetch(base + '/json'); assert(response.ok);
+const value = await response.json(); assert(value.method === 'GET');
+const echo = await fetch(base + '/echo', { method: 'POST', headers: { 'x-test': 'works' }, body: 'hello\0你好' });
+const data = await echo.json(); assert(data.body === 'hello\0你好' && data.header === 'works');
+const redirected = await fetch(base + '/redirect'); assert(redirected.redirected && redirected.url.endsWith('/json')); await redirected.body!.cancel();
+const manual = await fetch(base + '/redirect', { redirect: 'manual' }); assert(manual.status === 302); await manual.body!.cancel();
+let rejected = false; try { await fetch(base + '/redirect', { redirect: 'error' }); } catch { rejected = true; } assert(rejected);
+const compressed = await fetch(base + '/gzip'); assert(await compressed.text() === 'compressed\0你好');
+const chunks = await fetch(base + '/stream'); const reader = chunks.body!.getReader();
+const first = await reader.read(); assert(new TextDecoder().decode(first.value) === 'first');
+await reader.cancel();
+const signal = AbortSignal.timeout(30);
+rejected = false; try { await fetch(base + '/delay', { signal }); } catch (error) { rejected = error.name === 'TimeoutError'; } assert(rejected);
+const controller = new AbortController(); const partial = await fetch(base + '/stream', { signal: controller.signal });
+const stream = partial.body!.getReader(); await stream.read(); controller.abort();
+rejected = false; try { await stream.read(); } catch (error) { rejected = error.name === 'AbortError'; } assert(rejected);
+const concurrent = await Promise.all(Array.from({length:8}, async () => (await (await fetch(base+'/json')).json()).method));
+assert(concurrent.every(method => method === 'GET'));
+const dataURL = await fetch('data:text/plain;base64,aGVsbG8='); assert(await dataURL.text() === 'hello');
+console.log('http:ok');
