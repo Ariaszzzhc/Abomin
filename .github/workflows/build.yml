@@ -87,7 +87,13 @@ jobs:
       - name: Fetch JavaScriptCore
         run: python scripts/setup.py
       - name: Configure
-        run: xmake f -y -p ${{ matrix.platform }} -a ${{ matrix.arch }} -m ${{ inputs.configuration }} --toolchain=${{ matrix.toolchain }}
+        shell: bash
+        run: |
+          abomin_sdk_args=()
+          if [[ "${{ runner.os }}" != "Windows" ]]; then
+            abomin_sdk_args+=(--sdk="$ABOMIN_LLVM_ROOT")
+          fi
+          xmake f -y -p ${{ matrix.platform }} -a ${{ matrix.arch }} -m ${{ inputs.configuration }} --toolchain=${{ matrix.toolchain }} "${abomin_sdk_args[@]}"
       - name: Build
         run: xmake -y -v
       - name: Native service tests

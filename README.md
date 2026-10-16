@@ -31,6 +31,8 @@ On Windows, replace `python3` with `python` and use `--toolchain=clang-cl`.
 Run `python scripts/install_llvm.py` to install the pinned LLVM release with the
 GitHub CLI; add the printed `bin` directory to `PATH` in a local shell. Apply the printed `SDKROOT`
 (macOS) or `LD_LIBRARY_PATH` (Linux) value for build tools as well.
+With this standalone LLVM SDK, pass its printed `ABOMIN_LLVM_ROOT` directory to
+`xmake f --sdk=<directory>` so libc++ and libc++abi are linked from the same SDK.
 The manually triggered **Build runtime** GitHub workflow installs these tools,
 uses platform/configuration-specific caches, runs the tests, and uploads all
 three binary artifacts. Select `debug`, `release`, or `benchmark` when starting it.

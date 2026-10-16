@@ -40,7 +40,9 @@ if os.environ.get('GITHUB_PATH'):
 
 # Build-time SDK/runtime discovery also applies when the toolchain cache is hit.
 # 工具链缓存命中时也需要配置构建期 SDK 与运行库路径。
-environment = {}
+environment = {'ABOMIN_LLVM_ROOT': str(root)}
+for filename in ['libc++.a', 'libc++abi.a']:
+    for library in root.rglob(filename): print(f'{filename}: {library}')
 if platform.system() == 'Darwin':
     environment['SDKROOT'] = subprocess.check_output(['xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
 elif platform.system() == 'Linux':
