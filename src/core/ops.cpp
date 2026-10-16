@@ -442,8 +442,8 @@ namespace Abomin {
          }},
         {"worker", 1,
          [](Runtime& r, Args a) {
-           return JSValueMakeNumber(
-               r.context(), r.worker(ModuleLoader::resolve(text(r.context(), a[0]), r.entry)));
+           return JSValueMakeNumber(r.context(), r.worker(ModuleLoader::resolve(
+                                                     text(r.context(), a[0]), r.entry, false)));
          }},
         {"postWorker", 2,
          [](Runtime& r, Args a) {

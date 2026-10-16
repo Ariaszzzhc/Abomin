@@ -44,7 +44,8 @@ namespace Abomin {
     return result;
   }
 
-  std::string ModuleLoader::resolve(std::string_view specifier, std::string_view referrer) {
+  std::string ModuleLoader::resolve(std::string_view specifier, std::string_view referrer,
+                                    bool requireFile) {
     std::string result;
     if (specifier.starts_with("file:"))
       result = specifier;
@@ -76,7 +77,7 @@ namespace Abomin {
       }
     }
     auto filename = path(result);
-    if (!std::filesystem::is_regular_file(utf8Path(filename)))
+    if (requireFile && !std::filesystem::is_regular_file(utf8Path(filename)))
       throw std::runtime_error("Module not found: " + result);
     return result;
   }

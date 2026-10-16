@@ -108,6 +108,7 @@ namespace Abomin {
     while (!timers_.empty()) cancelTimer(timers_.begin()->first);
     if (dispatcher_) JSValueUnprotect(context(), dispatcher_);
     engine_.reset();
+    shutdownEngineTimers(&loop_);
     uv_close(reinterpret_cast<uv_handle_t*>(&wake_), nullptr);
     // Drain cancelled I/O before releasing native allocations. 排空已取消 I/O 后再释放原生内存。
     uv_run(&loop_, UV_RUN_DEFAULT);

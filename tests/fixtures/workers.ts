@@ -20,3 +20,7 @@ startup.postMessage('queued-before-ready'); assert(await started === 'queued-bef
 const failed = new Worker(new URL('./worker-error.ts', import.meta.url), { type: 'module' });
 const error = await new Promise<string>(resolve => { failed.onerror = event => { event.preventDefault(); resolve(event.message); }; });
 assert(error.includes('worker failed'));
+
+const missing = new Worker(new URL('./not-present.ts', import.meta.url), { type: 'module' });
+const missingError = await new Promise<string>(resolve => { missing.onerror = e => { e.preventDefault(); resolve(e.message); }; });
+assert(missingError.includes('Module not found'));

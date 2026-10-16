@@ -130,6 +130,7 @@ namespace Abomin {
     unsigned retained_{};
   };
 
+  void shutdownEngineTimers(uv_loop_t*);
   void pollNetwork(Runtime&);
   void shutdownNetwork(Runtime&);
   void installOps(Runtime& runtime);
