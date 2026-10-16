@@ -1,0 +1,105 @@
+name: Build runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: Build configuration
+        type: choice
+        options: [release, debug, benchmark]
+        default: release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macosx
+            arch: arm64
+            name: macos-arm64
+            toolchain: clang
+            suffix: ''
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x86_64
+            name: linux-x64
+            toolchain: clang
+            suffix: ''
+          - os: windows-2022
+            platform: windows
+            arch: x64
+            name: windows-x64
+            toolchain: clang-cl
+            suffix: '.exe'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_TERM_COLOR: always
+      RUSTFLAGS: ${{ matrix.platform == 'windows' && '-C target-feature=+crt-static' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: 'v3.1.1'
+      - uses: actions/cache@v4
+        with:
+          path: .cache/llvm
+          key: llvm-23.1.3-${{ matrix.name }}
+      - run: python scripts/install_llvm.py
+      - name: Linux native build prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libclang-dev
+      - name: Windows C++ environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Rust toolchain
+        run: rustup show active-toolchain
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .cache/jsc
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.xmake/packages
+            ~/AppData/Local/.xmake/packages
+            target
+            build
+          key: native-${{ matrix.name }}-${{ inputs.configuration }}-${{ hashFiles('Cargo.lock', 'xmake.lua', 'rust-toolchain.toml', 'scripts/setup.py') }}
+          restore-keys: |
+            native-${{ matrix.name }}-${{ inputs.configuration }}-
+      - name: Fetch JavaScriptCore
+        run: python scripts/setup.py
+      - name: Configure
+        run: xmake f -y -p ${{ matrix.platform }} -a ${{ matrix.arch }} -m ${{ inputs.configuration }} --toolchain=${{ matrix.toolchain }}
+      - name: Build
+        run: xmake -y -v
+      - name: Native service tests
+        run: cargo test --locked
+      - name: Runtime integration tests
+        run: python tests/run.py --binary build/${{ matrix.platform }}/${{ matrix.arch }}/${{ inputs.configuration }}/abomin${{ matrix.suffix }}
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp build/${{ matrix.platform }}/${{ matrix.arch }}/${{ inputs.configuration }}/abomin${{ matrix.suffix }} dist/
+          cp README.md THIRD_PARTY_NOTICES.md dist/
+          cp -r examples types runtime/vendor/streams.LICENSE dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: abomin-${{ matrix.name }}-${{ inputs.configuration }}
+          path: dist/
+          if-no-files-found: error
