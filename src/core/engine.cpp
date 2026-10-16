@@ -20,6 +20,12 @@
 #include "core/module_loader.hpp"
 #include "core/value.hpp"
 
+/** Linux engine binaries use GCC 13's C++ standard-library ABI.
+ * Linux 引擎预编译包使用 GCC 13 的 C++ 标准库 ABI。 */
+#if defined(__linux__) && (!defined(_GLIBCXX_RELEASE) || _GLIBCXX_RELEASE != 13)
+#  error "The pinned Linux JavaScriptCore SDK requires GCC 13 libstdc++ headers"
+#endif
+
 namespace Abomin {
   namespace {
     JSC::Identifier resolve(JSC::JSGlobalObject* global, JSC::JSModuleLoader*, JSC::JSValue name,

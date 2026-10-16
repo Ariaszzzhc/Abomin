@@ -7,8 +7,8 @@ local arch = os.arch() == "arm64" and "arm64" or "amd64"
 local jsc_default = ".cache/jsc/34c01d13391e00c06862a3d2c5b7fff350ac87e0/" .. host .. "-" .. arch .. "/release/bun-webkit"
 add_rules("mode.debug", "mode.release")
 if is_plat("linux") then
-  set_runtimes("c++_shared")
-  add_requireconfs("*", {configs = {runtimes = "c++_shared"}})
+  set_runtimes("stdc++_static")
+  add_requireconfs("*", {configs = {runtimes = "stdc++_static", cxxflags = {"--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13"}}})
 elseif is_plat("windows") then
   set_runtimes("MT")
   add_requireconfs("*", {configs = {runtimes = "MT"}})
@@ -48,14 +48,7 @@ target("abomin")
     local sdk = path.absolute(get_config("jsc"))
     target:add("includedirs", sdk .. "/include")
     target:add("linkdirs", sdk .. "/lib", "target/" .. (is_mode("debug") and "debug" or "release"))
-    if is_plat("linux") then
-      local llvm = os.getenv("ABOMIN_LLVM_ROOT") or get_config("sdk")
-      assert(llvm, "Set ABOMIN_LLVM_ROOT or --sdk to the pinned LLVM directory")
-      local cxx = os.files(path.join(llvm, "lib", "**", "libc++.a"))[1]
-      local abi = os.files(path.join(llvm, "lib", "**", "libc++abi.a"))[1]
-      assert(cxx and abi, "The LLVM SDK must contain libc++.a and libc++abi.a")
-      target:add("syslinks", path.absolute(cxx), path.absolute(abi))
-    end
+
   end)
   before_build(function (target)
     os.mkdir("build/generated")
@@ -74,8 +67,8 @@ target("abomin")
     add_syslinks("icucore", "resolv", "iconv")
     add_frameworks("Foundation", "Security")
   elseif is_plat("linux") then
-    add_cxxflags("-stdlib=libc++", {force = true})
-    add_ldflags("-nostdlib++", "-no-pie", {force = true})
+    add_cxxflags("-stdlib=libstdc++", "--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13", {force = true})
+    add_ldflags("--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13", "-no-pie", {force = true})
     add_links("icui18n", "icuuc", "icudata")
     add_syslinks("pthread", "dl", "m", "atomic")
   elseif is_plat("windows") then

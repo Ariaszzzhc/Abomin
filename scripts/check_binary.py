@@ -24,7 +24,7 @@ if platform.system() == 'Darwin':
 elif platform.system() == 'Linux':
     output = subprocess.check_output(['ldd', binary], text=True, env=environment)
     assert 'not found' not in output, output
-    assert not re.search(r'libc\+\+(?:abi)?\.so|libbrotli|libuv\.so|libicu', output), output
+    assert not re.search(r'libc\+\+(?:abi)?\.so|libstdc\+\+\.so|libbrotli|libuv\.so|libicu', output), output
 else:
     output = subprocess.check_output(['dumpbin', '/dependents', binary], text=True)
     assert not re.search(r'(?i)(?:msvcp|vcruntime)\d+.*\.dll', output), output

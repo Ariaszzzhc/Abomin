@@ -18,7 +18,8 @@ Toolchain versions are recorded in `scripts/toolchains.json` and
 `rust-toolchain.toml`: Clang 23.1.3, Rust 1.98.0, and xmake 3.1.1.
 Python 3.12 or newer bootstraps the engine SDK. CMake and a native platform SDK
 are needed for native dependencies. Windows uses clang-cl and the Visual Studio
-2022 x64 build environment; Linux uses LLVM's libc++.
+2022 x64 build environment. Linux uses Clang with GCC 13's libstdc++ headers
+and runtime to match the prebuilt engine ABI (install `g++-13`).
 
 ```sh
 python3 scripts/setup.py
@@ -32,7 +33,8 @@ Run `python scripts/install_llvm.py` to install the pinned LLVM release with the
 GitHub CLI; add the printed `bin` directory to `PATH` in a local shell. Apply the printed `SDKROOT`
 (macOS) or `LD_LIBRARY_PATH` (Linux) value for build tools as well.
 With this standalone LLVM SDK, pass its printed `ABOMIN_LLVM_ROOT` directory to
-`xmake f --sdk=<directory>` so libc++ and libc++abi are linked from the same SDK.
+`xmake f --sdk=<directory>` for explicit compiler SDK discovery. Linux links
+libstdc++ statically and selects the GCC 13 installation explicitly.
 The manually triggered **Build runtime** GitHub workflow installs these tools,
 uses platform/configuration-specific caches, runs the tests, and uploads all
 three binary artifacts. Select `debug`, `release`, or `benchmark` when starting it.
