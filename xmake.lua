@@ -1,7 +1,7 @@
 set_project("abomin")
 set_version("0.1.0")
 set_xmakever("3.0.0")
-set_languages("c++2c")
+set_languages("c++26")
 local host = is_host("macosx") and "macos" or os.host()
 local arch = os.arch() == "arm64" and "arm64" or "amd64"
 local jsc_default = ".cache/jsc/34c01d13391e00c06862a3d2c5b7fff350ac87e0/" .. host .. "-" .. arch .. "/release/bun-webkit"
@@ -72,7 +72,7 @@ target("abomin")
   elseif is_plat("windows") then
     set_runtimes("MT")
     add_defines("NOMINMAX", "U_STATIC_IMPLEMENTATION")
-    add_cxxflags("/GR-", {force = true})
+    add_cxxflags("/GR-", "/Zc:__cplusplus", {force = true})
     add_links("sicuin", "sicuuc", "sicudt")
     add_syslinks("ws2_32", "userenv", "bcrypt", "ntdll", "dbghelp", "psapi", "winmm", "advapi32", "crypt32", "iphlpapi", "shlwapi", "shell32", "ole32")
   end

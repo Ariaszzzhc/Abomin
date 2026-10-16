@@ -53,11 +53,13 @@ jobs:
       - uses: xmake-io/github-action-setup-xmake@v1
         with:
           xmake-version: 'v3.1.1'
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: llvm-cache
         with:
           path: .cache/llvm
           key: llvm-23.1.3-${{ matrix.name }}
       - run: python scripts/install_llvm.py
+        id: llvm-install
       - name: Linux native build prerequisites
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libclang-dev
@@ -68,7 +70,8 @@ jobs:
           arch: x64
       - name: Rust toolchain
         run: rustup show active-toolchain
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: native-cache
         with:
           path: |
             .cache/jsc
@@ -103,3 +106,20 @@ jobs:
           name: abomin-${{ matrix.name }}-${{ inputs.configuration }}
           path: dist/
           if-no-files-found: error
+      - uses: actions/cache/save@v4
+        if: always() && steps.llvm-install.outcome == 'success' && steps.llvm-cache.outputs.cache-hit != 'true'
+        with:
+          path: .cache/llvm
+          key: llvm-23.1.3-${{ matrix.name }}
+      - uses: actions/cache/save@v4
+        if: always() && steps.native-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            .cache/jsc
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.xmake/packages
+            ~/AppData/Local/.xmake/packages
+            target
+            build
+          key: native-${{ matrix.name }}-${{ inputs.configuration }}-${{ hashFiles('Cargo.lock', 'xmake.lua', 'rust-toolchain.toml', 'scripts/setup.py') }}
