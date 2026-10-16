@@ -1,0 +1,16 @@
+BasedOnStyle: Google
+AllowShortFunctionsOnASingleLine: None
+AccessModifierOffset: -2
+AlignTrailingComments: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AlwaysBreakTemplateDeclarations: Yes
+BreakBeforeBraces: Attach
+ColumnLimit: 100
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+IncludeBlocks: Regroup
+IndentPPDirectives: AfterHash
+IndentWidth: 2
+NamespaceIndentation: All
+SeparateDefinitionBlocks: Always
+BreakBeforeBinaryOperators: All
+BreakBeforeTernaryOperators: true

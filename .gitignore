@@ -1,0 +1,7 @@
+.cache/
+.xmake/
+build/
+target/
+.DS_Store
+__pycache__/
+dist/
