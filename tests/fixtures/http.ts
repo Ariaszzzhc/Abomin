@@ -7,6 +7,7 @@ const data = await echo.json(); assert(data.body === 'hello\0你好' && data.hea
 const redirected = await fetch(base + '/redirect'); assert(redirected.redirected && redirected.url.endsWith('/json')); await redirected.body!.cancel();
 const manual = await fetch(base + '/redirect', { redirect: 'manual' }); assert(manual.status === 302); await manual.body!.cancel();
 let rejected = false; try { await fetch(base + '/redirect', { redirect: 'error' }); } catch { rejected = true; } assert(rejected);
+const closed = await fetch(base + '/close'); assert(await closed.text() === 'closed-after-body');
 const compressed = await fetch(base + '/gzip'); assert(await compressed.text() === 'compressed\0你好');
 const chunks = await fetch(base + '/stream'); const reader = chunks.body!.getReader();
 const first = await reader.read(); assert(new TextDecoder().decode(first.value) === 'first');

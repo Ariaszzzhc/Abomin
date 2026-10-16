@@ -25,10 +25,20 @@ namespace Abomin {
           std::u8string(reinterpret_cast<const char8_t*>(value.data()), value.size()));
     }
 
+    /** Keep cache hashing independent of new libc++ dynamic symbols.
+     * 缓存哈希不依赖新版 libc++ 的动态符号，兼容较早 macOS。 */
+    struct SourceKeyHash {
+      std::size_t operator()(const std::string& value) const noexcept {
+        std::size_t result = 14695981039346656037ull;
+        for (unsigned char byte : value) result = (result ^ byte) * 1099511628211ull;
+        return result;
+      }
+    };
+
     std::mutex cacheMutex;
     std::uint64_t cacheClock{};
     std::size_t cachedBytes{};
-    std::unordered_map<std::string, CachedSource> cache;
+    std::unordered_map<std::string, CachedSource, SourceKeyHash> cache;
   }  // namespace
 
   std::string ModuleLoader::path(const std::string& url) {

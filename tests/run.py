@@ -50,7 +50,8 @@ class RuntimeTests(unittest.TestCase):
                 if body: self.wfile.write(body)
             def do_GET(self):
                 try:
-                    if self.path == '/redirect': self.respond(302, headers={'Location':'/json'})
+                    if self.path == '/close': self.close_connection = True; self.respond(200, b'closed-after-body', {'Connection':'close'})
+                    elif self.path == '/redirect': self.respond(302, headers={'Location':'/json'})
                     elif self.path == '/gzip': self.respond(200, gzip.compress('compressed\0你好'.encode()), {'Content-Encoding':'gzip'})
                     elif self.path == '/delay': time.sleep(.3); self.respond(200, b'delayed')
                     elif self.path == '/stream':

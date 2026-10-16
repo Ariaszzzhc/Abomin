@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <cstdlib>
-#include <unordered_set>
+#include <set>
 
 #include "core/runtime.hpp"
 
@@ -23,7 +23,7 @@ namespace {
   // 引擎线程缓存可能晚于 C++ 静态对象销毁，因此注册表采用进程生命周期。
   struct TimerRegistry {
     std::mutex mutex;
-    std::unordered_set<EngineTimer*> timers;
+    std::set<EngineTimer*> timers;
   };
 
   TimerRegistry& registry() {

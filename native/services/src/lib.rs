@@ -180,6 +180,9 @@ pub unsafe extern "C" fn ab_digest(algorithm: u32, data: *const u8, len: usize) 
     )
 }
 
+// HTTP transport links the C++ host; subprocess tests cover that boundary.
+// HTTP 传输链接 C++ 宿主，该边界由子进程集成测试验证。
+#[cfg(not(test))]
 mod http;
 
 /// # Safety

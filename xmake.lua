@@ -7,8 +7,8 @@ local arch = os.arch() == "arm64" and "arm64" or "amd64"
 local jsc_default = ".cache/jsc/34c01d13391e00c06862a3d2c5b7fff350ac87e0/" .. host .. "-" .. arch .. "/release/bun-webkit"
 add_rules("mode.debug", "mode.release")
 if is_plat("linux") then
-  set_runtimes("c++_static")
-  add_requireconfs("*", {configs = {runtimes = "c++_static"}})
+  set_runtimes("c++_shared")
+  add_requireconfs("*", {configs = {runtimes = "c++_shared"}})
 elseif is_plat("windows") then
   set_runtimes("MT")
   add_requireconfs("*", {configs = {runtimes = "MT"}})
@@ -25,7 +25,9 @@ add_requires("libuv 1.52.1", "ada 3.4.4", "simdutf 8.2.0", "mimalloc 3.2.8",
 add_requires("zlib-ng 2.3.3", {system = false, configs = {shared = false, zlib_compat = true}})
 
 target("rust_services")
-  set_kind("phony")
+  set_kind("static")
+  set_basename("abomin_services")
+  set_targetdir("target/" .. (is_mode("debug") and "debug" or "release"))
   on_build(function (target)
     local mode = is_mode("debug") and "debug" or "release"
     local args = {"build", "--locked"}
@@ -46,7 +48,14 @@ target("abomin")
     local sdk = path.absolute(get_config("jsc"))
     target:add("includedirs", sdk .. "/include")
     target:add("linkdirs", sdk .. "/lib", "target/" .. (is_mode("debug") and "debug" or "release"))
-    target:add("linkdeps", path.join("target", is_mode("debug") and "debug" or "release", is_plat("windows") and "abomin_services.lib" or "libabomin_services.a"))
+    if is_plat("linux") then
+      local llvm = os.getenv("ABOMIN_LLVM_ROOT") or get_config("sdk")
+      assert(llvm, "Set ABOMIN_LLVM_ROOT or --sdk to the pinned LLVM directory")
+      local cxx = os.files(path.join(llvm, "lib", "**", "libc++.a"))[1]
+      local abi = os.files(path.join(llvm, "lib", "**", "libc++abi.a"))[1]
+      assert(cxx and abi, "The LLVM SDK must contain libc++.a and libc++abi.a")
+      target:add("syslinks", path.absolute(cxx), path.absolute(abi))
+    end
   end)
   before_build(function (target)
     os.mkdir("build/generated")
@@ -66,7 +75,7 @@ target("abomin")
     add_frameworks("Foundation", "Security")
   elseif is_plat("linux") then
     add_cxxflags("-stdlib=libc++", {force = true})
-    add_ldflags("-stdlib=libc++", "-no-pie", {force = true})
+    add_ldflags("-nostdlib++", "-no-pie", {force = true})
     add_links("icui18n", "icuuc", "icudata")
     add_syslinks("pthread", "dl", "m", "atomic")
   elseif is_plat("windows") then

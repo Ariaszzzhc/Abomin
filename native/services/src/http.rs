@@ -246,10 +246,11 @@ pub unsafe extern "C" fn ab_http_new(
             let driver: Driver = Box::pin(connection);
             match future::select(response, driver).await {
                 Either::Left((response, driver)) => (response.map_err(|e| e.to_string())?, driver),
-                Either::Right((result, _)) => {
-                    return Err(format!(
-                        "HTTP/2 connection ended before response: {result:?}"
-                    ));
+                Either::Right((result, response)) => {
+                    result.map_err(|e| e.to_string())?;
+                    let response = response.await.map_err(|e| e.to_string())?;
+                    let finished: Driver = Box::pin(async { Ok(()) });
+                    (response, finished)
                 }
             }
         } else {
@@ -260,8 +261,11 @@ pub unsafe extern "C" fn ab_http_new(
             let driver: Driver = Box::pin(connection);
             match future::select(response, driver).await {
                 Either::Left((response, driver)) => (response.map_err(|e| e.to_string())?, driver),
-                Either::Right((result, _)) => {
-                    return Err(format!("HTTP connection ended before response: {result:?}"));
+                Either::Right((result, response)) => {
+                    result.map_err(|e| e.to_string())?;
+                    let response = response.await.map_err(|e| e.to_string())?;
+                    let finished: Driver = Box::pin(async { Ok(()) });
+                    (response, finished)
                 }
             }
         };

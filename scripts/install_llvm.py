@@ -44,6 +44,7 @@ environment = {'ABOMIN_LLVM_ROOT': str(root)}
 for filename in ['libc++.a', 'libc++abi.a']:
     for library in root.rglob(filename): print(f'{filename}: {library}')
 if platform.system() == 'Darwin':
+    environment['MACOSX_DEPLOYMENT_TARGET'] = '15.0'
     environment['SDKROOT'] = subprocess.check_output(['xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
 elif platform.system() == 'Linux':
     directories = {str(root/'lib')}
